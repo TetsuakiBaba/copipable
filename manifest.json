@@ -2,6 +2,7 @@
     "name": "copipable",
     "short_name": "copipable",
     "description": "一時的なコピー＆ペーストメモ管理ウェブアプリ",
+    "version": "1.0.0",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#fffb85",

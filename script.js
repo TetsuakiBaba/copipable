@@ -291,5 +291,14 @@ themeToggle.addEventListener('change', () => {
     htmlEl.setAttribute('data-bs-theme', mode);
 });
 
+// display app version from manifest.json
+fetch('manifest.json')
+  .then(res => res.json())
+  .then(data => {
+    const verEl = document.getElementById('appVersion');
+    if (verEl && data.version) verEl.textContent = `v${data.version}`;
+  })
+  .catch(err => console.error('Failed to load manifest version', err));
+
 // init
 loadNotes();
