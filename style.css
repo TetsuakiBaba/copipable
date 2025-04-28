@@ -1,0 +1,89 @@
+#workspace {
+    width: 100%;
+    height: calc(100vh - 120px);
+    position: relative;
+}
+
+.note {
+    position: absolute;
+    width: 200px;
+    background: #fffb85;
+    padding: .5rem;
+    border-radius: .3rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, .2);
+    cursor: default;
+}
+
+.note:active {
+    cursor: default;
+}
+
+.note-header {
+    display: flex;
+    justify-content: flex-end;
+    gap: .3rem;
+    margin: 0;
+    padding: .3rem .5rem;
+    background: rgba(0, 0, 0, 0.1);
+    cursor: grab;
+    border-bottom: 1px dashed #ccc;
+    border-top-left-radius: .3rem;
+    border-top-right-radius: .3rem;
+}
+
+.note-header:active {
+    cursor: grabbing;
+}
+
+.note-content {
+    min-height: 50px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow: auto;
+}
+
+/* note 内の画像を枠内に収める */
+.note-content img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+.note-size {
+    position: absolute;
+    bottom: .3rem;
+    right: .3rem;
+    font-size: .7rem;
+    color: #555;
+}
+
+/* Dark mode styles */
+.dark-mode {
+    background-color: #121212;
+    color: #eee;
+}
+
+.dark-mode .navbar {
+    background-color: #212529 !important;
+}
+
+.dark-mode .navbar .navbar-brand,
+.dark-mode .navbar .form-check-label {
+    color: #eee;
+}
+
+.dark-mode .note {
+    background: #555;
+    color: #eee;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, .5);
+}
+
+.dark-mode .note-header {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* テキストエリアに画像をドラッグした際のドロップゾーン表示 */
+#note-input.drag-over {
+    border: 2px dashed #0d6efd;
+    background-color: rgba(13, 110, 253, 0.1);
+}

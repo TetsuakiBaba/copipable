@@ -1,0 +1,21 @@
+{
+    "name": "copipable",
+    "short_name": "copipable",
+    "description": "一時的なコピー＆ペーストメモ管理ウェブアプリ",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#fffb85",
+    "theme_color": "#fffb85",
+    "icons": [
+        {
+            "src": "icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
