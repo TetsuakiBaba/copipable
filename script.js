@@ -73,10 +73,18 @@ function generateId() {
 
 // create and append note element
 function renderNote(note) {
+    // 既存ノートに幅・高さがない場合はデフォルトを設定
+    if (!note.width || !note.height) {
+        note.width = note.width || 200;
+        note.height = note.height || 200;
+        updateNoteDB(note);
+    }
     const noteEl = document.createElement('div');
     noteEl.classList.add('note');
     noteEl.style.left = note.x + 'px';
     noteEl.style.top = note.y + 'px';
+    noteEl.style.width = note.width + 'px';
+    noteEl.style.height = note.height + 'px';
     noteEl.dataset.id = note.id;
 
     // header
@@ -145,6 +153,31 @@ function renderNote(note) {
         }
     });
 
+    // リサイズ処理: ResizeObserver でリサイズ後をDBに保存
+    // 初回コールをスキップするフラグ
+    let isInitialResize = true;
+    const resizeObserver = new ResizeObserver(entries => {
+        if (isInitialResize) {
+            // 初期描画時のNotifyを無視
+            isInitialResize = false;
+            return;
+        }
+        for (const entry of entries) {
+            // 外側の幅・高さを取得（padding/borderを含む）
+            const rect = noteEl.getBoundingClientRect();
+            const width = rect.width;
+            const height = rect.height;
+            const id = noteEl.dataset.id;
+            const idx = notes.findIndex(n => n.id === id);
+            if (idx > -1) {
+                notes[idx].width = width;
+                notes[idx].height = height;
+                updateNoteDB(notes[idx]);
+            }
+        }
+    });
+    resizeObserver.observe(noteEl);
+
     // copy
     copyBtn.addEventListener('click', async () => {
         if (note.type === 'text') {
@@ -205,7 +238,7 @@ function renderNote(note) {
 saveButton.addEventListener('click', async () => {
     const text = noteInput.value.trim();
     if (!text) return;
-    const note = { id: generateId(), type: 'text', content: text, x: 10, y: 10 };
+    const note = { id: generateId(), type: 'text', content: text, x: 10, y: 10, width: 200, height: 200 };
     await addNoteDB(note);
     notes.push(note);
     renderNote(note);
@@ -223,7 +256,7 @@ noteInput.addEventListener('paste', async e => {
                 const reader = new FileReader();
                 reader.onload = async () => {
                     const dataUrl = reader.result;
-                    const note = { id: generateId(), type: 'image', content: dataUrl, x: 10, y: 10 };
+                    const note = { id: generateId(), type: 'image', content: dataUrl, x: 10, y: 10, width: 200, height: 200 };
                     await addNoteDB(note);
                     notes.push(note);
                     renderNote(note);
@@ -260,7 +293,62 @@ noteInput.addEventListener('drop', async e => {
             const reader = new FileReader();
             reader.onload = async () => {
                 const dataUrl = reader.result;
-                const note = { id: generateId(), type: 'image', content: dataUrl, x: 10, y: 10 };
+                const note = { id: generateId(), type: 'image', content: dataUrl, x: 10, y: 10, width: 200, height: 200 };
+                await addNoteDB(note);
+                notes.push(note);
+                renderNote(note);
+                updateNoteCount();
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+});
+
+// 全画面ドロップゾーン作成
+const globalDropZone = document.createElement('div');
+globalDropZone.id = 'global-drop-zone';
+globalDropZone.textContent = 'ここに画像をドロップ';
+document.body.appendChild(globalDropZone);
+
+// 全画面ドラッグ＆ドロップイベント
+// 画像ファイルドラッグ時にオーバーレイ表示
+document.addEventListener('dragenter', e => {
+    const items = e.dataTransfer.items;
+    if (items && Array.from(items).some(item => item.kind === 'file' && item.type.startsWith('image/'))) {
+        e.preventDefault();
+        globalDropZone.classList.add('active');
+    }
+});
+// オーバーレイ上でドラムオーバー
+document.addEventListener('dragover', e => {
+    const items = e.dataTransfer.items;
+    if (items && Array.from(items).some(item => item.kind === 'file' && item.type.startsWith('image/'))) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+    }
+});
+// ドラッグ終了時にオーバーレイ非表示
+document.addEventListener('dragend', () => {
+    globalDropZone.classList.remove('active');
+});
+// オーバーレイから離れたとき
+globalDropZone.addEventListener('dragleave', () => {
+    globalDropZone.classList.remove('active');
+});
+// ドロップ処理
+globalDropZone.addEventListener('drop', async e => {
+    e.preventDefault();
+    globalDropZone.classList.remove('active');
+    const files = Array.from(e.dataTransfer.files || []);
+    for (const file of files) {
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = async () => {
+                const dataUrl = reader.result;
+                // 画面中央に配置
+                const x = (window.innerWidth - 200) / 2;
+                const y = (window.innerHeight - 200) / 2;
+                const note = { id: generateId(), type: 'image', content: dataUrl, x, y, width: 200, height: 200 };
                 await addNoteDB(note);
                 notes.push(note);
                 renderNote(note);
@@ -293,12 +381,12 @@ themeToggle.addEventListener('change', () => {
 
 // display app version from manifest.json
 fetch('manifest.json')
-  .then(res => res.json())
-  .then(data => {
-    const verEl = document.getElementById('appVersion');
-    if (verEl && data.version) verEl.textContent = `v${data.version}`;
-  })
-  .catch(err => console.error('Failed to load manifest version', err));
+    .then(res => res.json())
+    .then(data => {
+        const verEl = document.getElementById('appVersion');
+        if (verEl && data.version) verEl.textContent = `v${data.version}`;
+    })
+    .catch(err => console.error('Failed to load manifest version', err));
 
 // init
 loadNotes();

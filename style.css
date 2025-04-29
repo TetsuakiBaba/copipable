@@ -12,6 +12,12 @@
     border-radius: .3rem;
     box-shadow: 0 2px 5px rgba(0, 0, 0, .2);
     cursor: default;
+    /* リサイズ可能に */
+    resize: both;
+    overflow: auto;
+    /* 最小サイズを設定 */
+    min-width: 100px;
+    min-height: 100px;
 }
 
 .note:active {
@@ -20,7 +26,7 @@
 
 .note-header {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
     gap: .3rem;
     margin: 0;
     padding: .3rem .5rem;
@@ -86,4 +92,28 @@
 #note-input.drag-over {
     border: 2px dashed #0d6efd;
     background-color: rgba(13, 110, 253, 0.1);
+}
+
+/* 全画面ドロップゾーン */
+#global-drop-zone {
+    /* 非表示・配置 */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    z-index: 1000;
+    /* テキストエリアと同じ見た目 */
+    border: 2px dashed #0d6efd;
+    background-color: rgba(13, 110, 253, 0.1);
+    cursor: copy;
+    justify-content: center;
+    align-items: center;
+    color: #0d6efd;
+    font-size: 1.2rem;
+}
+
+#global-drop-zone.active {
+    display: flex;
 }
