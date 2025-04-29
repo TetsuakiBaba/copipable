@@ -27,6 +27,37 @@ function snap(val) {
     return isGridSnap ? Math.round(val / 25) * 25 : val;
 }
 
+// カラーオプション
+const COLORS = [
+    { name: 'yellow', hex: '#fffb85' },
+    { name: 'blue', hex: '#d0e7ff' },
+    { name: 'green', hex: '#d1ffd1' },
+    { name: 'red', hex: '#ffd1d1' },
+    { name: 'gray', hex: '#e0e0e0' },
+    { name: 'pink', hex: '#ffd1e5' }
+];
+// デフォルトカラー読み込み
+let defaultNoteColor = localStorage.getItem('defaultNoteColor') || 'yellow';
+// 入力エリア用カラーパネル
+const inputColorPanel = document.getElementById('input-color-panel');
+function renderInputColorPanel() {
+    inputColorPanel.innerHTML = '';
+    COLORS.forEach(c => {
+        const sw = document.createElement('div');
+        sw.className = 'color-swatch';
+        sw.style.backgroundColor = c.hex;
+        sw.dataset.color = c.name;
+        if (c.name === defaultNoteColor) sw.classList.add('selected');
+        sw.addEventListener('click', () => {
+            defaultNoteColor = c.name;
+            localStorage.setItem('defaultNoteColor', defaultNoteColor);
+            renderInputColorPanel();
+        });
+        inputColorPanel.appendChild(sw);
+    });
+}
+renderInputColorPanel();
+
 // IndexedDB 初期化
 const dbPromise = new Promise((resolve, reject) => {
     const req = indexedDB.open('copipable-db', 1);
@@ -93,10 +124,18 @@ function generateId() {
 
 // create and append note element
 function renderNote(note) {
+    // ノートにcolorがなければdefaultNoteColorを設定
+    if (!note.color) note.color = defaultNoteColor;
+    // DB更新（マイグレーション対応）
+    if (!note.color || !note.width || !note.height) updateNoteDB(note);
     // 既存ノートに幅・高さがない場合はデフォルトを設定
     if (!note.width || !note.height) {
         note.width = note.width || 200;
         note.height = note.height || 200;
+        updateNoteDB(note);
+    }
+    if (!note.color) {
+        note.color = defaultNoteColor;
         updateNoteDB(note);
     }
     const noteEl = document.createElement('div');
@@ -106,6 +145,8 @@ function renderNote(note) {
     noteEl.style.width = note.width + 'px';
     noteEl.style.height = note.height + 'px';
     noteEl.dataset.id = note.id;
+    // 背景色設定
+    noteEl.style.backgroundColor = COLORS.find(c => c.name === note.color).hex;
 
     // header
     const header = document.createElement('div');
@@ -115,14 +156,40 @@ function renderNote(note) {
     copyBtn.className = 'btn btn-sm btn-light';
     copyBtn.innerHTML = '<i class="bi bi-clipboard"></i>';
     copyBtn.title = 'コピー';
-    header.appendChild(copyBtn);
     // delete button
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'btn btn-sm btn-light text-danger';
     deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
     deleteBtn.title = '削除';
-    header.appendChild(deleteBtn);
-
+    // ボタンをグループ化
+    const btnGroup = document.createElement('div');
+    btnGroup.className = 'btn-group-custom';
+    // ボタンを横並びにする行を作成
+    const btnRow = document.createElement('div');
+    btnRow.className = 'btn-row';
+    btnRow.appendChild(copyBtn);
+    btnRow.appendChild(deleteBtn);
+    btnGroup.appendChild(btnRow);
+    // カラーパネル（メモ上部）
+    const noteColorPanel = document.createElement('div');
+    noteColorPanel.className = 'color-panel';
+    COLORS.forEach(c => {
+        const sw = document.createElement('div');
+        sw.className = 'color-swatch';
+        sw.style.backgroundColor = c.hex;
+        sw.dataset.color = c.name;
+        if (c.name === note.color) sw.classList.add('selected');
+        sw.addEventListener('click', async () => {
+            note.color = c.name;
+            await updateNoteDB(note);
+            noteEl.style.backgroundColor = c.hex;
+            noteColorPanel.querySelectorAll('.color-swatch').forEach(el => el.classList.remove('selected'));
+            sw.classList.add('selected');
+        });
+        noteColorPanel.appendChild(sw);
+    });
+    btnGroup.appendChild(noteColorPanel);
+    header.appendChild(btnGroup);
     noteEl.appendChild(header);
 
     // content
@@ -267,7 +334,7 @@ function renderNote(note) {
 saveButton.addEventListener('click', async () => {
     const text = noteInput.value.trim();
     if (!text) return;
-    const note = { id: generateId(), type: 'text', content: text, x: snap(10), y: snap(10), width: 200, height: 200 };
+    const note = { id: generateId(), type: 'text', content: text, x: snap(10), y: snap(10), width: 200, height: 200, color: defaultNoteColor };
     await addNoteDB(note);
     notes.push(note);
     renderNote(note);
@@ -293,7 +360,7 @@ noteInput.addEventListener('paste', async e => {
                 const reader = new FileReader();
                 reader.onload = async () => {
                     const dataUrl = reader.result;
-                    const note = { id: generateId(), type: 'image', content: dataUrl, x: snap(10), y: snap(10), width: 200, height: 200 };
+                    const note = { id: generateId(), type: 'image', content: dataUrl, x: snap(10), y: snap(10), width: 200, height: 200, color: defaultNoteColor };
                     await addNoteDB(note);
                     notes.push(note);
                     renderNote(note);
@@ -330,7 +397,7 @@ noteInput.addEventListener('drop', async e => {
             const reader = new FileReader();
             reader.onload = async () => {
                 const dataUrl = reader.result;
-                const note = { id: generateId(), type: 'image', content: dataUrl, x: snap(10), y: snap(10), width: 200, height: 200 };
+                const note = { id: generateId(), type: 'image', content: dataUrl, x: snap(10), y: snap(10), width: 200, height: 200, color: defaultNoteColor };
                 await addNoteDB(note);
                 notes.push(note);
                 renderNote(note);
@@ -385,7 +452,7 @@ globalDropZone.addEventListener('drop', async e => {
                 // 画面中央に配置
                 const baseX = (window.innerWidth - 200) / 2;
                 const baseY = (window.innerHeight - 200) / 2;
-                const note = { id: generateId(), type: 'image', content: dataUrl, x: snap(baseX), y: snap(baseY), width: 200, height: 200 };
+                const note = { id: generateId(), type: 'image', content: dataUrl, x: snap(baseX), y: snap(baseY), width: 200, height: 200, color: defaultNoteColor };
                 await addNoteDB(note);
                 notes.push(note);
                 renderNote(note);
