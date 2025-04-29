@@ -275,6 +275,14 @@ saveButton.addEventListener('click', async () => {
     noteInput.value = '';
 });
 
+// Save shortcut: Mac uses Cmd+Enter, Windows uses Ctrl+Enter
+noteInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && ((navigator.platform.includes('Mac') && e.metaKey) || (!navigator.platform.includes('Mac') && e.ctrlKey))) {
+        e.preventDefault();
+        saveButton.click();
+    }
+});
+
 // paste で画像対応
 noteInput.addEventListener('paste', async e => {
     const items = Array.from(e.clipboardData.items);
