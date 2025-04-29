@@ -6,6 +6,15 @@ const workspace = document.getElementById('workspace');
 const saveButton = document.getElementById('save-button');
 const clearAllButton = document.getElementById('clear-all-button');
 const noteInput = document.getElementById('note-input');
+const gridToggle = document.getElementById('grid-toggle');
+let isGridSnap = false;
+gridToggle.addEventListener('click', () => {
+    isGridSnap = !isGridSnap;
+    gridToggle.textContent = `Grid: ${isGridSnap ? 'ON' : 'OFF'}`;
+});
+function snap(val) {
+    return isGridSnap ? Math.round(val / 25) * 25 : val;
+}
 
 // IndexedDB 初期化
 const dbPromise = new Promise((resolve, reject) => {
@@ -136,8 +145,10 @@ function renderNote(note) {
     });
     document.addEventListener('mousemove', e => {
         if (!isDragging) return;
-        noteEl.style.left = e.clientX - offsetX + 'px';
-        noteEl.style.top = e.clientY - offsetY + 'px';
+        const rawX = e.clientX - offsetX;
+        const rawY = e.clientY - offsetY;
+        noteEl.style.left = snap(rawX) + 'px';
+        noteEl.style.top = snap(rawY) + 'px';
     });
     document.addEventListener('mouseup', async e => {
         if (isDragging) {
@@ -238,7 +249,7 @@ function renderNote(note) {
 saveButton.addEventListener('click', async () => {
     const text = noteInput.value.trim();
     if (!text) return;
-    const note = { id: generateId(), type: 'text', content: text, x: 10, y: 10, width: 200, height: 200 };
+    const note = { id: generateId(), type: 'text', content: text, x: snap(10), y: snap(10), width: 200, height: 200 };
     await addNoteDB(note);
     notes.push(note);
     renderNote(note);
@@ -256,7 +267,7 @@ noteInput.addEventListener('paste', async e => {
                 const reader = new FileReader();
                 reader.onload = async () => {
                     const dataUrl = reader.result;
-                    const note = { id: generateId(), type: 'image', content: dataUrl, x: 10, y: 10, width: 200, height: 200 };
+                    const note = { id: generateId(), type: 'image', content: dataUrl, x: snap(10), y: snap(10), width: 200, height: 200 };
                     await addNoteDB(note);
                     notes.push(note);
                     renderNote(note);
@@ -293,7 +304,7 @@ noteInput.addEventListener('drop', async e => {
             const reader = new FileReader();
             reader.onload = async () => {
                 const dataUrl = reader.result;
-                const note = { id: generateId(), type: 'image', content: dataUrl, x: 10, y: 10, width: 200, height: 200 };
+                const note = { id: generateId(), type: 'image', content: dataUrl, x: snap(10), y: snap(10), width: 200, height: 200 };
                 await addNoteDB(note);
                 notes.push(note);
                 renderNote(note);
@@ -346,9 +357,9 @@ globalDropZone.addEventListener('drop', async e => {
             reader.onload = async () => {
                 const dataUrl = reader.result;
                 // 画面中央に配置
-                const x = (window.innerWidth - 200) / 2;
-                const y = (window.innerHeight - 200) / 2;
-                const note = { id: generateId(), type: 'image', content: dataUrl, x, y, width: 200, height: 200 };
+                const baseX = (window.innerWidth - 200) / 2;
+                const baseY = (window.innerHeight - 200) / 2;
+                const note = { id: generateId(), type: 'image', content: dataUrl, x: snap(baseX), y: snap(baseY), width: 200, height: 200 };
                 await addNoteDB(note);
                 notes.push(note);
                 renderNote(note);
@@ -361,7 +372,7 @@ globalDropZone.addEventListener('drop', async e => {
 
 // clear all
 clearAllButton.addEventListener('click', async () => {
-    if (confirm('すべてのメモを削除しますか？')) {
+    if (confirm('Are you sure you want to delete all notes?')) {
         await clearAllNotesDB();
         notes = [];
         workspace.innerHTML = '';

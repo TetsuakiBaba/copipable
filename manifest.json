@@ -2,7 +2,7 @@
     "name": "copipable",
     "short_name": "copipable",
     "description": "A temporary copy & paste memo management web app.",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#fffb85",

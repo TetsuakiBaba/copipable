@@ -27,19 +27,23 @@
                 <input class="form-check-input" type="checkbox" id="themeToggle">
                 <label class="form-check-label" for="themeToggle">Dark Mode</label>
             </div>
-            <a href="https://github.com/TetsuakiBaba/copipable" class="text-secondary ms-3" target="_blank" rel="noopener" title="GitHub">
+            <a href="https://github.com/TetsuakiBaba/copipable" class="text-secondary ms-3" target="_blank"
+                rel="noopener" title="GitHub">
                 <i class="bi bi-github fs-4"></i>
             </a>
         </div>
     </nav>
     <div class="container my-3">
         <div class="input-group mb-2">
-            <textarea id="note-input" class="form-control" rows="3" placeholder="ここにメモを入力"></textarea>
-            <button id="save-button" class="btn btn-primary" type="button" title="保存"><i class="bi bi-save"></i>
-                save</button>
-            <button id="clear-all-button" class="btn btn-danger" type="button" title="全削除"><i class="bi bi-trash3-fill">
-                    <span id="number_of_memo"></span></i>
-            </button>
+
+            <textarea id="note-input" class="form-control" rows="3" placeholder="Enter note here"></textarea>
+            <button id="save-button" class="btn btn-primary" type="button" title="Save"><i class="bi bi-save"></i>
+                Save</button>
+            <button id="clear-all-button" class="btn btn-danger" type="button" title="Clear All"><i
+                    class="bi bi-trash3-fill"></i> <span id="number_of_memo"></span></button>
+            <button id="grid-toggle" class="btn btn-outline-secondary" type="button" title="Grid Snap"><i
+                    class="bi bi-grid-3x3-gap"></i> Grid: OFF</button>
+
         </div>
     </div>
     <div id="workspace" class="position-relative"></div>
