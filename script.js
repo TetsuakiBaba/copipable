@@ -7,10 +7,21 @@ const saveButton = document.getElementById('save-button');
 const clearAllButton = document.getElementById('clear-all-button');
 const noteInput = document.getElementById('note-input');
 const gridToggle = document.getElementById('grid-toggle');
-let isGridSnap = false;
+// load grid snap state from localStorage
+const savedGridSnap = localStorage.getItem('gridSnapEnabled');
+let isGridSnap = savedGridSnap === 'true';
+// ボタン表示更新関数
+function updateGridToggleButton() {
+    gridToggle.innerHTML = `<i class="bi bi-grid-3x3-gap"></i> Grid: ${isGridSnap ? 'ON' : 'OFF'}`;
+}
+// initialize button state
+updateGridToggleButton();
+
 gridToggle.addEventListener('click', () => {
     isGridSnap = !isGridSnap;
-    gridToggle.textContent = `Grid: ${isGridSnap ? 'ON' : 'OFF'}`;
+    // save to localStorage
+    localStorage.setItem('gridSnapEnabled', isGridSnap);
+    updateGridToggleButton();
 });
 function snap(val) {
     return isGridSnap ? Math.round(val / 25) * 25 : val;
@@ -205,6 +216,13 @@ function renderNote(note) {
                 console.error('画像のコピーに失敗しました', err);
             }
         }
+        // アイコンをチェックマークに切り替え
+        const iconEl = copyBtn.querySelector('i');
+        iconEl.classList.replace('bi-clipboard', 'bi-clipboard-check');
+        // 2秒後に元のアイコンに戻す
+        setTimeout(() => {
+            iconEl.classList.replace('bi-clipboard-check', 'bi-clipboard');
+        }, 1000);
     });
 
     // delete
