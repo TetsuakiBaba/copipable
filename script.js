@@ -104,11 +104,34 @@ async function clearAllNotesDB() {
     return tx.complete;
 }
 
+// 数値をキーIDに変換
+function numToKeyId(num) {
+    if (num <= 9) return String(num);
+    const code = 'a'.charCodeAt(0) + (num - 10);
+    return String.fromCharCode(code);
+}
+
+// 各メモにキーIDを割り当て、DBとDOMを更新
+async function assignNoteIds() {
+    for (let i = 0; i < notes.length; i++) {
+        const note = notes[i];
+        const keyId = numToKeyId(i + 1);
+        note.keyId = keyId;
+        await updateNoteDB(note);
+        const noteEl = workspace.querySelector(`[data-id='${note.id}']`);
+        if (noteEl) {
+            const idEl = noteEl.querySelector('.note-id');
+            if (idEl) idEl.textContent = `${keyId}`;
+        }
+    }
+}
+
 // load notes from IndexedDB
 async function loadNotes() {
     notes = await getAllNotesDB();
     notes.forEach(renderNote);
     updateNoteCount();
+    await assignNoteIds();
 }
 
 // update note count display
@@ -120,6 +143,38 @@ function updateNoteCount() {
 // generate unique id
 function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+
+// コピー時のフィードバック表示
+function showCopyFeedback() {
+    const feedback = document.createElement('div');
+    feedback.className = 'copy-feedback';
+    feedback.textContent = 'Copied!';
+    document.body.appendChild(feedback);
+    // CSSトランジション適用
+    setTimeout(() => feedback.classList.add('visible'), 10);
+    // 一定時間後にフェードアウトして削除
+    setTimeout(() => {
+        feedback.classList.remove('visible');
+        setTimeout(() => document.body.removeChild(feedback), 300);
+    }, 1000);
+}
+
+// ノートをコピーする共通関数
+async function handleCopy(note) {
+    if (note.type === 'text') {
+        await navigator.clipboard.writeText(note.content);
+    } else if (note.type === 'image') {
+        try {
+            const res = await fetch(note.content);
+            const blob = await res.blob();
+            const item = new ClipboardItem({ [blob.type]: blob });
+            await navigator.clipboard.write([item]);
+        } catch (err) {
+            console.error('画像のコピーに失敗しました', err);
+        }
+    }
+    showCopyFeedback();
 }
 
 // create and append note element
@@ -151,6 +206,12 @@ function renderNote(note) {
     // header
     const header = document.createElement('div');
     header.className = 'note-header';
+    // キーIDラベル
+    const idLabel = document.createElement('div');
+    idLabel.className = 'note-id badge position-absolute top-0 small start-0 translate-start bg-secondary rounded-pill';
+    idLabel.textContent = note.keyId || '';
+    if (!window.electronAPI) idLabel.classList.add('invisible');
+
     // copy button
     const copyBtn = document.createElement('button');
     copyBtn.className = 'btn btn-sm btn-light';
@@ -188,6 +249,7 @@ function renderNote(note) {
         });
         noteColorPanel.appendChild(sw);
     });
+    noteEl.appendChild(idLabel);
     btnGroup.appendChild(noteColorPanel);
     header.appendChild(btnGroup);
     noteEl.appendChild(header);
@@ -269,27 +331,7 @@ function renderNote(note) {
 
     // copy
     copyBtn.addEventListener('click', async () => {
-        if (note.type === 'text') {
-            // テキストメモは文字列をコピー
-            await navigator.clipboard.writeText(note.content);
-        } else if (note.type === 'image') {
-            // 画像メモはBlob化してコピー
-            try {
-                const res = await fetch(note.content);
-                const blob = await res.blob();
-                const item = new ClipboardItem({ [blob.type]: blob });
-                await navigator.clipboard.write([item]);
-            } catch (err) {
-                console.error('画像のコピーに失敗しました', err);
-            }
-        }
-        // アイコンをチェックマークに切り替え
-        const iconEl = copyBtn.querySelector('i');
-        iconEl.classList.replace('bi-clipboard', 'bi-clipboard-check');
-        // 2秒後に元のアイコンに戻す
-        setTimeout(() => {
-            iconEl.classList.replace('bi-clipboard-check', 'bi-clipboard');
-        }, 1000);
+        await handleCopy(note);
     });
 
     // delete
@@ -298,6 +340,7 @@ function renderNote(note) {
         notes = notes.filter(n => n.id !== note.id);
         await deleteNoteDB(note.id);
         updateNoteCount();
+        await assignNoteIds();
     });
 
     // edit on double-click
@@ -339,6 +382,7 @@ saveButton.addEventListener('click', async () => {
     notes.push(note);
     renderNote(note);
     updateNoteCount();
+    await assignNoteIds();
     noteInput.value = '';
 });
 
@@ -365,6 +409,7 @@ noteInput.addEventListener('paste', async e => {
                     notes.push(note);
                     renderNote(note);
                     updateNoteCount();
+                    await assignNoteIds();
                 };
                 reader.readAsDataURL(file);
                 e.preventDefault();
@@ -402,6 +447,7 @@ noteInput.addEventListener('drop', async e => {
                 notes.push(note);
                 renderNote(note);
                 updateNoteCount();
+                await assignNoteIds();
             };
             reader.readAsDataURL(file);
         }
@@ -457,6 +503,7 @@ globalDropZone.addEventListener('drop', async e => {
                 notes.push(note);
                 renderNote(note);
                 updateNoteCount();
+                await assignNoteIds();
             };
             reader.readAsDataURL(file);
         }
@@ -492,5 +539,60 @@ fetch('manifest.json')
     })
     .catch(err => console.error('Failed to load manifest version', err));
 
+// Electron グローバルショートカット経由でペースト
+if (window.electronAPI && window.electronAPI.onPasteNote) {
+    window.electronAPI.onPasteNote(async (key) => {
+        const note = notes.find(n => n.keyId === key);
+        if (!note) return;
+        if (note.type === 'text') {
+            await navigator.clipboard.writeText(note.content);
+        } else if (note.type === 'image') {
+            try {
+                const res = await fetch(note.content);
+                const blob = await res.blob();
+                const item = new ClipboardItem({ [blob.type]: blob });
+                await navigator.clipboard.write([item]);
+            } catch (err) {
+                console.error('画像のコピーに失敗しました', err);
+            }
+        }
+        // フォーカス中の要素に直接貼り付け
+        const active = document.activeElement;
+        if (note.type === 'text' && active && (active.tagName === 'TEXTAREA' || (active.tagName === 'INPUT' && /text|search|url|tel|password/.test(active.type)))) {
+            const start = active.selectionStart;
+            const end = active.selectionEnd;
+            const val = active.value;
+            active.value = val.slice(0, start) + note.content + val.slice(end);
+            active.selectionStart = active.selectionEnd = start + note.content.length;
+            active.focus();
+        } else {
+            document.execCommand('paste');
+        }
+    });
+}
+
+// Electron グローバルショートカット経由でリクエストを受け取り、メモ内容を送信
+if (window.electronAPI && window.electronAPI.onRequestNote) {
+    window.electronAPI.onRequestNote((key) => {
+        const note = notes.find(n => n.keyId === key);
+        if (!note) return;
+        window.electronAPI.sendDeliverNote(key, note.type, note.content);
+    });
+}
+
+// Electron グローバルショートカット copy-note イベントでコピー
+if (window.electronAPI && window.electronAPI.onCopyNote) {
+    window.electronAPI.onCopyNote(async (key) => {
+        const note = notes.find(n => n.keyId === key);
+        if (!note) return;
+        await handleCopy(note);
+    });
+}
+
+// ※ ウィンドウ内keydownショートカットは廃止しました。
+
 // init
-loadNotes();
+loadNotes().then(() => {
+    // レンダラー側のメモ配列をメインプロセスから参照可能に
+    window.getNotes = () => notes;
+});

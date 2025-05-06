@@ -1,6 +1,7 @@
 # copipable
+![App Icon](./icons/icon-192.png)
 
-A temporary copy-and-paste sticky-note web application (PWA-enabled).
+A temporary copy-and-paste sticky-note web application (PWA-enabled) with native app support via Electron.
 
 ## Features
 - Create, edit, delete, and copy text notes
@@ -10,6 +11,7 @@ A temporary copy-and-paste sticky-note web application (PWA-enabled).
 - Toggle dark/light mode (Bootstrap 5 data-bs-theme)
 - PWA support with Web App Manifest for home screen installation
 - Double-click image notes to view them in an enlarged modal
+- In the native app, instantly copy a note by its number using a global keyboard shortcut
 
 ## Installation
 1. Clone this repository or download the ZIP
@@ -28,6 +30,35 @@ A temporary copy-and-paste sticky-note web application (PWA-enabled).
 6. Click the trash icon on a note to delete it, or use the **Clear All** button to remove all notes
 7. Toggle dark/light mode using the switch in the navbar
 8. Notes and their positions are stored in IndexedDB and persist after reloads
+
+## Desktop Application via Electron
+
+For environment setup with Electron Forge, see: https://www.electronforge.io/import-existing-project
+
+Prerequisites:
+- Node.js (v14+)
+
+Steps:
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Run in development mode
+npm start
+
+# 3. Create a packaged app (out/package)
+npm run package
+
+# 4. Make distributables (Zip, DMG) in out/make
+npm run make
+```
+
+Icons:
+- The app icon is set via `icons/icon.icns` (specified in `forge.config.js`).
+
+Global shortcuts:
+- Windows/Linux: Press `Ctrl + <key ID>` to copy the corresponding note to the clipboard.
+- macOS: Press `⌘ + <key ID>` to copy the corresponding note to the clipboard.
 
 ## License
 This project is licensed under the MIT License. See `LICENSE` for details.
